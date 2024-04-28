@@ -1,0 +1,103 @@
+version: "3.6"
+
+networks:
+  splunknet:
+    driver: bridge
+    attachable: true
+
+volumes:
+  splunk-var:
+  splunk-etc:
+  splunk-forwarder-etc:
+  splunk-forwarder-var:
+
+services:
+  uf1:
+    networks:
+      splunknet:
+        aliases:
+          - uf1
+    image: splunk/universalforwarder:6.5.0
+    hostname: uf1
+    container_name: uf1
+    environment:
+      SPLUNK_PASSWORD: 'admin123'
+      SPLUNK_FORWARD_SERVER: 'so1:9997'
+      SPLUNK_FORWARD_SERVER_ARGS: '-method clone'
+      SPLUNK_START_ARGS: '--accept-license --answer-yes'
+      SPLUNK_ADD_1: 'monitor /var/log/nginx/access.log -index main -sourcetype nginx-access'
+      SPLUNK_ADD_2: 'monitor /var/log/nginx/error.log -index main -sourcetype nginx-error'
+      SPLUNK_ADD_3: 'monitor /var/log/apache2/access.log -index main -sourcetype apache'
+      SPLUNK_ADD_4: 'monitor /var/log/flog/rfc3164 -index main -sourcetype flog-rfc3164'
+      SPLUNK_ADD_5: 'monitor /var/log/flog/rfc5424 -index main -sourcetype flog-rfc5424'
+      SPLUNK_ADD_6: 'monitor /var/log/flog/json -index main -sourcetype flog-json'
+      SPLUNK_USER: 'root'
+    volumes:
+      - ./nginx/nginx_logs:/var/log/nginx:ro
+      - ./flog/apache:/var/log/apache2:ro
+      - ./flog/rfc3164:/var/log/flog/rfc3164:ro
+      - ./flog/rfc5424:/var/log/flog/rfc5424:ro
+      - ./flog/json:/var/log/flog/json:ro
+      - splunk-forwarder-etc:/opt/splunk/etc
+      - splunk-forwarder-var:/opt/splunk/var
+    depends_on:
+      - so1
+      - flog1
+      - flog2
+      - flog3
+      - flog4
+
+  so1:
+    networks:
+      splunknet:
+        aliases:
+          - so1
+    image: splunk/splunk:latest
+    hostname: so1
+    container_name: so1
+    environment:
+      SPLUNK_START_ARGS: '--accept-license'
+      SPLUNK_STANDALONE_URL: 'so1'
+      SPLUNK_PASSWORD: 'admin123'
+    volumes:
+      - splunk-var:/opt/splunk/var
+      - splunk-etc:/opt/splunk/etc
+    ports:
+      - "8000:8000"
+      - "9997:9997"
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8001:80"
+    volumes:
+      - ./nginx/nginx_logs:/var/log/nginx
+
+  flog1:
+    image: mingrammer/flog:latest
+    container_name: flog1
+    volumes:
+      - ./flog/rfc3164:/data/logs
+    command: -f rfc3164 -o /data/logs/rfc3164.log -n 100000 -t log -d 15s -w
+
+  flog2:
+    image: mingrammer/flog:latest
+    container_name: flog2
+    volumes:
+      - ./flog/apache:/data/logs
+    command: -f apache_common -o /data/logs/access.log -n 100000 -t log -d 3s -w
+
+  flog3:
+    image: mingrammer/flog:latest
+    container_name: flog3
+    volumes:
+      - ./flog/rfc5424:/data/logs
+    command: -f rfc5424 -o /data/logs/rfc5424.log -n 100000 -t log -d 20s -w
+
+  flog4:
+    image: mingrammer/flog:latest
+    container_name: flog4
+    volumes:
+      - ./flog/json:/data/logs
+    command: -f json -o /data/logs/json.log -n 100000 -t log -d 10s -w
