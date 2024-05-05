@@ -1,6 +1,6 @@
 # Splunk Basic Lab
 
-Simple basic lab setup containing Splunk ES, a universal forwarder, and several log generators. Based on Docker.
+Simple basic lab setup containing Splunk Enterprise, a universal forwarder, and several log generators. Based on Docker.
 
 ## Instalation
 You need to have Docker installed, then clone the repository and run the containers with the command:
