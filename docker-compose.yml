@@ -31,7 +31,6 @@ services:
       SPLUNK_ADD_4: 'monitor /var/log/flog/rfc3164 -index main -sourcetype flog-rfc3164'
       SPLUNK_ADD_5: 'monitor /var/log/flog/rfc5424 -index main -sourcetype flog-rfc5424'
       SPLUNK_ADD_6: 'monitor /var/log/flog/json -index main -sourcetype flog-json'
-      SPLUNK_USER: 'root'
     volumes:
       - ./nginx/nginx_logs:/var/log/nginx:ro
       - ./flog/apache:/var/log/apache2:ro
